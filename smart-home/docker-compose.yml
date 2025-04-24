@@ -1,0 +1,44 @@
+services:
+  homeassistant:
+    image: homeassistant/home-assistant:stable
+    container_name: homeassistant
+    volumes:
+      - /mnt/ssd/homeassistant/config:/config
+    ports:
+      - "8123:8123"
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - frigate
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883" # Default MQTT port
+      - "9001:9001" # WebSocket port
+    volumes:
+      - /mnt/ssd/mosquitto/config:/mosquitto
+      - /mnt/ssd/mosquitto/data:/mosquitto/data
+      - /mnt/ssd/mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  frigate:
+    container_name: frigate
+    restart: unless-stopped
+    image: ghcr.io/blakeblackshear/frigate:stable
+    volumes:
+      - /mnt/ssd/frigate/config:/config
+      - /mnt/ssd/frigate/storage:/media/frigate
+      - type: tmpfs
+        target: /tmp/cache
+        tmpfs:
+          size: 1000000000
+    ports:
+      - "5000:5000"
+      - "8554:8554" # RTSP feeds
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128 # Hardware acceleration
+      - /dev/bus/usb:/dev/bus/usb # Google Coral
+    depends_on:
+      - mosquitto
